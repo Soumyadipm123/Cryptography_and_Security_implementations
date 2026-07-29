@@ -19,17 +19,17 @@ int main(){
     double cpu_time_used;
     
     srand(time(NULL));
-    // 1. Declare pointers and allocate memory dynamically on the heap
+    // Dynamicallly memory allocation and forming two arrays
     int *arr1 = (int *)malloc(trials * sizeof(int));
     int *arr2 = (int *)malloc(trials * sizeof(int));
 
-    // 2. ALWAYS check if the computer actually gave you the memory
+    // Checking if memory allocation failed or not?
     if (arr1 == NULL || arr2 == NULL) {
         printf("Memory allocation failed!\n");
-        return 1; // Stop the program if we are out of memory
+        return 1; // Stoping the programme
     }
 
-    // 3. Populate the arrays (the syntax remains exactly the same)
+    // now filling the arrays with random integers
     for (int i = 0; i < trials; i++){
         arr1[i] = rand() + 1;
         arr2[i] = rand() + 1;
