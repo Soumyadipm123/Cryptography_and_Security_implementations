@@ -44,7 +44,7 @@ int main(){
     cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
     double avg_time = (cpu_time_used/ trials) * 1000000000;
     printf("Total time for %d calculations: %f seconds\n", trials, cpu_time_used);
-    printf("Average time per calculation: %f microseconds\n", avg_time);
+    printf("Average time per calculation: %f nanoseconds\n", avg_time);
     free(arr1);
     free(arr2);
 
