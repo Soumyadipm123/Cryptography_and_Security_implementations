@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
+#include <windows.h>
 
 // Include the header for x86/x64 hardware intrinsics like __rdtsc()
 #if defined(_MSC_VER)
@@ -101,61 +102,131 @@ void chacha20_encrypt(uint32_t *initial_state, const uint8_t *in, uint8_t *out, 
 }
 
 
+
 int main() {
-	size_t i;
     uint8_t key[32] = {
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
         0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
         0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,
         0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38
     };
-    uint8_t nonce[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
-    
+
+    uint8_t nonce[8] = {
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x01
+    };
+
+    #define MESSAGE_SIZE 64
+    #define ITERATIONS 1000000
+
+    uint8_t input[MESSAGE_SIZE];
+    uint8_t output[MESSAGE_SIZE];
+
     uint32_t state[16];
-    char message[1024];
-    uint8_t ciphertext[1024];
-    uint8_t decrypted[1024];
 
-    printf("Type a message to encrypt: ");
-    if (fgets(message, sizeof(message), stdin) == NULL) return 1;
-    message[strcspn(message, "\n")] = '\0';
-    size_t msg_len = strlen(message);
-    if (msg_len == 0) return 0;
+    int i;
 
-
-    chacha20_init(state, key, nonce, 1);
-    chacha20_encrypt(state, (const uint8_t*)message, ciphertext, msg_len);
-
-    unsigned long long start_cycles, end_cycles;
-    
-    chacha20_init(state, key, nonce, 1); // Reset state before measuring
-    
-    start_cycles = __rdtsc(); // Read Time-Stamp Counter before
-    chacha20_encrypt(state, (const uint8_t*)message, ciphertext, msg_len);
-    end_cycles = __rdtsc();   // Read Time-Stamp Counter after
-
-
-    unsigned long long total_cycles = end_cycles - start_cycles;
-
-    printf("\n--- HARDWARE PROFILING RESULTS ---\n");
-    printf("Message length : %zu bytes\n", msg_len);
-    printf("CPU Cycles     : %llu\n", total_cycles);
-    if (msg_len > 0) {
-        printf("Cycles/Byte    : %.2f\n", (double)total_cycles / msg_len);
+    // Initialize a fixed 64-byte input
+    for (i = 0; i < MESSAGE_SIZE; i++) {
+        input[i] = (uint8_t)i;
     }
 
-    printf("\n--- VERIFYING OUTPUT ---\n");
-    printf("Ciphertext (HEX): ");
-    for (i = 0; i < msg_len; i++) {
-        printf("%02X ", ciphertext[i]);
-    }
-    printf("\n");
-
+    // Initialize ChaCha20 state
     chacha20_init(state, key, nonce, 1);
-    chacha20_encrypt(state, ciphertext, decrypted, msg_len);
-    decrypted[msg_len] = '\0';
-    
-    printf("Decrypted Msg   : %s\n", decrypted);
+
+    // Variables for performance measurement
+    uint64_t start_cycles, end_cycles;
+    uint64_t total_cycles;
+
+    LARGE_INTEGER frequency;
+    LARGE_INTEGER start_time, end_time;
+
+    QueryPerformanceFrequency(&frequency);
+
+    // Hardware cycle measurement
+    _mm_lfence();
+    start_cycles = __rdtsc();
+    _mm_lfence();
+
+    // Wall-clock time measurement
+    QueryPerformanceCounter(&start_time);
+
+    // Perform encryption 1,000,000 times
+    for (i = 0; i < ITERATIONS; i++) {
+        chacha20_encrypt(
+            state,
+            input,
+            output,
+            MESSAGE_SIZE
+        );
+    }
+
+    QueryPerformanceCounter(&end_time);
+
+    _mm_lfence();
+    end_cycles = __rdtsc();
+
+    total_cycles = end_cycles - start_cycles;
+
+    // Prevent the output from being discarded
+    volatile uint64_t checksum = 0;
+
+    for (i = 0; i < MESSAGE_SIZE; i++) {
+        checksum += output[i];
+    }
+
+    // Calculate total bytes processed
+    uint64_t total_bytes =
+        (uint64_t)MESSAGE_SIZE * ITERATIONS;
+
+    // Calculate benchmark metrics
+    double elapsed_seconds =
+        (double)(end_time.QuadPart - start_time.QuadPart)
+        / frequency.QuadPart;
+
+    double cycles_per_iteration =
+        (double)total_cycles / ITERATIONS;
+
+    double cycles_per_byte =
+        (double)total_cycles / total_bytes;
+
+    double time_per_iteration =
+        (elapsed_seconds * 1e9) / ITERATIONS;
+
+    double time_per_byte =
+        (elapsed_seconds * 1e9) / total_bytes;
+
+    // Display results
+    printf("\n========================================\n");
+    printf("       ChaCha20 Performance Benchmark\n");
+    printf("========================================\n");
+
+    printf("Message Size       : %d bytes\n", MESSAGE_SIZE);
+    printf("Iterations         : %d\n", ITERATIONS);
+    printf("Total Bytes        : %llu bytes\n",
+           (unsigned long long)total_bytes);
+
+    printf("\n--- RESULTS ---\n");
+
+    printf("Total CPU Cycles   : %llu\n",
+           (unsigned long long)total_cycles);
+
+    printf("Cycles/Iteration   : %.2f\n",
+           cycles_per_iteration);
+
+    printf("Cycles/Byte        : %.4f\n",
+           cycles_per_byte);
+
+    printf("Time/Iteration     : %.2f ns\n",
+           time_per_iteration);
+
+    printf("Time/Byte          : %.2f ns\n",
+           time_per_byte);
+
+    printf("\nChecksum           : %llu\n",
+           (unsigned long long)checksum);
+
+    printf("========================================\n");
 
     return 0;
 }
