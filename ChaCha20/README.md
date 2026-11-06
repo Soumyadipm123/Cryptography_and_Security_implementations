@@ -1,98 +1,212 @@
-# ChaCha20 Encryption and Decryption in C
+# ChaCha20 Performance Benchmarking in C
 
-A C implementation of the ChaCha20 stream cipher with hardware performance profiling using the x86/x64 timestamp counter (`__rdtsc()`).
+A C implementation of the ChaCha20 stream cipher with hardware performance benchmarking using the x86/x64 timestamp counter (`__rdtsc()`).
 
-The program accepts a message from the user, encrypts it, displays the ciphertext in hexadecimal, measures the CPU cycles required for encryption, and decrypts the ciphertext to verify the original message.
+This project evaluates the performance of ChaCha20 under different GCC compiler optimization levels (`-O0`, `-O2`, and `-O3`). The benchmark measures CPU cycles, cycles per byte, execution time per iteration, and execution time per byte.
 
 ## Overview
 
 This implementation demonstrates:
 
 - ChaCha20 key and state initialization.
-- ChaCha20 quarter-round operation.
+- Quarter-round operations.
 - Column rounds and diagonal rounds.
 - The 20-round ChaCha20 permutation.
 - Keystream generation and XOR-based encryption.
-- Decryption using the same XOR operation.
-- Hardware performance measurement using `__rdtsc()`.
-- CPU cycles and cycles per byte (CPB) calculation.
+- Performance measurement using `__rdtsc()`.
+- Execution time measurement using Windows Query Performance Counter.
+- Comparison of compiler optimization levels.
 
-## ChaCha20 Configuration
+## Hardware and Software Specifications
+
+### Processor Information
+
+| Parameter | Specification |
+|---|---|
+| Processor | Intel Core i5-12450HX |
+| Generation | 12th Generation |
+| Base Frequency | 2.40 GHz |
+| Number of Cores | 8 |
+| Logical Processors | 12 |
+| L1 Cache | 704 KB |
+| L2 Cache | 7 MB |
+| L3 Cache | 12 MB |
+
+### Software Environment
+
+| Parameter | Specification |
+|---|---|
+| Operating System | Windows 11 |
+| Compiler | GCC |
+| Compiler Version | GCC 6.3.0 (MinGW) |
+| Programming Language | C |
+| Development Environment | Visual Studio Code |
+
+## Benchmark Configuration
+
+The same input size and number of iterations are used for all three optimization levels.
 
 | Parameter | Value |
 |---|---:|
 | Algorithm | ChaCha20 |
-| Key size | 256 bits (32 bytes) |
-| Nonce size | 64 bits (8 bytes) |
-| Counter size | 64 bits |
-| Number of rounds | 20 |
-| State size | 512 bits |
-| Keystream block size | 512 bits (64 bytes) |
-| Performance measurement | `__rdtsc()` |
+| Key Size | 256 bits |
+| Nonce Size | 64 bits |
+| Counter Size | 64 bits |
+| Number of Rounds | 20 |
+| Message Size | 64 bytes |
+| Number of Iterations | 1,000,000 |
+| Total Bytes Processed | 64,000,000 bytes |
+| Optimization Levels | -O0, -O2, -O3 |
 
-**Note:** This implementation uses the original ChaCha20 state layout with a 64-bit counter and a 64-bit nonce. It is different from the IETF ChaCha20 variant, which uses a 32-bit counter and a 96-bit nonce.
+## Compiler Optimization Levels
 
-## Test Configuration
+The benchmark evaluates three GCC optimization levels.
 
-### Key (32 bytes)
+| Optimization | Description |
+|---|---|
+| -O0 | No compiler optimization |
+| -O2 | Moderate compiler optimization |
+| -O3 | Aggressive compiler optimization |
+
+All three versions were compiled with the `-msse2` flag to enable SSE2 instructions required by the LFENCE intrinsic used in the benchmark.
+
+## Benchmark Results
+
+The following results were obtained by executing the ChaCha20 implementation on my local laptop.
+
+### Performance Comparison
+
+| Optimization | Cycles/Iteration | Cycles/Byte | Time/Iteration (ns) | Time/Byte (ns) |
+|---|---:|---:|---:|---:|
+| -O0 | 2789.69 | 43.5888 | 1037.83 | 16.22 |
+| -O2 | 840.56 | 13.1338 | 312.71 | 4.89 |
+| -O3 | 253.55 | 3.9617 | 94.32 | 1.47 |
+
+### Detailed Results
+
+**1. Optimization Level -O0**
 
 ```text
-01 02 03 04 05 06 07 08
-11 12 13 14 15 16 17 18
-21 22 23 24 25 26 27 28
-31 32 33 34 35 36 37 38
+Message Size       : 64 bytes
+Iterations         : 1000000
+Total Bytes        : 64000000 bytes
+
+Total CPU Cycles   : 2789685697
+Cycles/Iteration   : 2789.69
+Cycles/Byte        : 43.5888
+Time/Iteration     : 1037.83 ns
+Time/Byte          : 16.22 ns
+
+Checksum           : 8028
 ```
 
-### Nonce (8 bytes)
+**2. Optimization Level -O2**
 
 ```text
-00 00 00 00 00 00 00 01
+Message Size       : 64 bytes
+Iterations         : 1000000
+Total Bytes        : 64000000 bytes
+
+Total CPU Cycles   : 840561098
+Cycles/Iteration   : 840.56
+Cycles/Byte        : 13.1338
+Time/Iteration     : 312.71 ns
+Time/Byte          : 4.89 ns
+
+Checksum           : 8028
 ```
 
-### Initial Counter
+**3. Optimization Level -O3**
 
 ```text
-1
+Message Size       : 64 bytes
+Iterations         : 1000000
+Total Bytes        : 64000000 bytes
+
+Total CPU Cycles   : 253547634
+Cycles/Iteration   : 253.55
+Cycles/Byte        : 3.9617
+Time/Iteration     : 94.32 ns
+Time/Byte          : 1.47 ns
+
+Checksum           : 8028
 ```
 
-### Input Message
+## Performance Analysis
 
-```text
-I love Machine Learning
-```
+The benchmark results show a significant improvement in ChaCha20 performance with compiler optimization.
 
-Message length: **23 bytes**
+### Comparison of Optimization Levels
 
-## Results Obtained
+- **-O0:** The unoptimized implementation records the highest execution time and CPU cycles.
+- **-O2:** Compiler optimization significantly reduces the execution time and cycles per byte.
+- **-O3:** The lowest execution time and CPU cycles are observed with aggressive compiler optimization.
 
-The following results were obtained by running the program on my local Windows laptop.
+### Performance Improvement
 
-### Hardware Profiling Results
+Using the measured time per iteration:
 
-| Metric | Result |
+| Comparison | Performance Improvement |
 |---|---:|
-| Message length | 23 bytes |
-| CPU cycles | 4,620 |
-| Cycles per byte (CPB) | 200.87 |
+| -O0 to -O2 | 69.85% |
+| -O2 to -O3 | 69.83% |
+| -O0 to -O3 | 90.90% |
 
-### Encryption Result
+The `-O3` implementation takes approximately 11 times less time per iteration than the `-O0` implementation in this benchmark.
 
-**Ciphertext (HEX):**
+## Benchmark Methodology
 
-```text
-6A 26 A0 49 29 3C 69 67 4E B2 E3 63 48 4D 60 41
-E1 C8 9C 7D 4D D4 44
+The benchmark uses two timing mechanisms.
+
+### 1. CPU Cycle Measurement
+
+The processor timestamp counter is accessed using:
+
+```c
+start_cycles = __rdtsc();
+
+/* ChaCha20 encryption */
+
+end_cycles = __rdtsc();
 ```
 
-### Decryption Result
+Total CPU timestamp-counter ticks:
 
-**Decrypted message:**
+\[
+\text{Total Ticks} = \text{End Timestamp} - \text{Start Timestamp}
+\]
 
-```text
-I love Machine Learning
-```
+Average ticks per iteration:
 
-The decrypted message matches the original input message, confirming that encryption and decryption work correctly for this test run.
+\[
+\text{Ticks/Iteration} =
+\frac{\text{Total Ticks}}{\text{Number of Iterations}}
+\]
+
+Ticks per byte:
+
+\[
+\text{Ticks/Byte} =
+\frac{\text{Total Ticks}}{\text{Total Bytes Processed}}
+\]
+
+### 2. Execution Time Measurement
+
+Windows Query Performance Counter is used to measure elapsed time.
+
+Time per iteration:
+
+\[
+\text{Time/Iteration} =
+\frac{\text{Total Execution Time}}{1,000,000}
+\]
+
+Time per byte:
+
+\[
+\text{Time/Byte} =
+\frac{\text{Total Execution Time}}{64,000,000}
+\]
 
 ## How to Compile and Run
 
@@ -101,81 +215,65 @@ The decrypted message matches the original input message, confirming that encryp
 - Windows operating system.
 - x86/x64 processor.
 - GCC compiler (MinGW-w64).
-- C source file (`chacha20.c`).
-
-The code uses `__rdtsc()` to read the processor timestamp counter.
-
-For GCC on x86/x64:
-
-```c
-#include <x86intrin.h>
-```
-
-For Microsoft Visual C (MSVC):
-
-```c
-#include <intrin.h>
-```
+- Visual Studio Code (optional).
 
 ### Compilation
 
-Open a terminal in the directory containing the source file and execute:
+Open the terminal in the directory containing `chacha20.c`.
 
-```bash
-gcc chacha20.c -o chacha20.exe
+**Optimization Level -O0:**
+
+```cmd
+gcc chacha20.c -o chacha20_O0.exe -O0 -msse2
+```
+
+**Optimization Level -O2:**
+
+```cmd
+gcc chacha20.c -o chacha20_O2.exe -O2 -msse2
+```
+
+**Optimization Level -O3:**
+
+```cmd
+gcc chacha20.c -o chacha20_O3.exe -O3 -msse2
 ```
 
 ### Execution
 
-Run the executable:
+Run each executable separately:
 
 ```cmd
-.\chacha20.exe
+.\chacha20_O0.exe
+.\chacha20_O2.exe
+.\chacha20_O3.exe
 ```
 
-Enter a message when prompted. The program displays the message length, CPU cycles, cycles per byte, ciphertext, and decrypted message.
-
-## Benchmark Methodology
-
-The program measures the timestamp-counter value immediately before and after the encryption operation.
-
-Total CPU cycles:
-
-\[
-\text{CPU Cycles} = \text{End Timestamp} - \text{Start Timestamp}
-\]
-
-Cycles per byte:
-
-\[
-\text{CPB} = \frac{\text{Total CPU Cycles}}{\text{Message Length in Bytes}}
-\]
-
-For the recorded execution:
-
-\[
-\text{CPB} = \frac{4620}{23} \approx 200.87
-\]
+Each execution displays the CPU cycles, cycles per byte, execution time per iteration, and execution time per byte.
 
 ## Performance Notes
 
-The reported values are from one execution on my local laptop. Actual performance may vary depending on:
+The reported measurements were obtained on an Intel Core i5-12450HX processor.
 
-- CPU architecture and processor model.
-- Compiler and optimization settings.
+Actual performance may vary depending on:
+
+- Processor architecture and clock frequency.
+- Compiler version and optimization settings.
 - Operating system and background processes.
-- Measurement overhead.
+- CPU temperature and power management.
+- Benchmark measurement overhead.
 
-For more reliable comparisons, conduct multiple benchmark runs, include warm-up iterations, use appropriate serialization around timestamp-counter reads, and record the CPU model, compiler version, and compiler flags.
+The results represent measured values from the local machine and should not be treated as universal ChaCha20 performance figures.
 
-## Security Notes
+For more reliable comparisons, perform multiple independent benchmark runs, include warm-up iterations, and report statistical summaries.
 
-- This program uses a fixed key and nonce for demonstration purposes.
-- Never reuse the same key and nonce pair for different messages in real applications.
-- ChaCha20 provides confidentiality but does not authenticate ciphertext.
-- For practical security applications, use a vetted ChaCha20-Poly1305 implementation.
+**Note:** `__rdtsc()` measures timestamp-counter ticks, which are not necessarily equivalent to actual CPU core cycles on modern processors.
 
-This is an educational implementation and should be reviewed and tested before security-sensitive use.
+## Security Note
+
+This project is intended for educational purposes, cryptographic algorithm analysis, and performance benchmarking.
+
+For real-world applications requiring authenticated encryption, use a vetted ChaCha20-Poly1305 implementation.
 
 ## Repository Structure
 
