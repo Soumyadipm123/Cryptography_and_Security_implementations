@@ -1,0 +1,18 @@
+# Compiled binaries
+demo
+mlkem_test
+mlkem_bench
+mlkem_bench_time
+
+# Object files
+*.o
+
+# Executables
+*.exe
+*.out
+
+# Temporary files
+*.tmp
+
+# Editor files
+.vscode/
